@@ -6,9 +6,8 @@ import java.io.FileReader;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MyJsonReader {
     //- Минимальное время полета между городами Владивосток и Тель-Авив для каждого авиаперевозчика
@@ -21,7 +20,7 @@ public class MyJsonReader {
         JsonReader jsr = new JsonReader(new FileReader(FILE_NAME));
         TicketWrapper ticketWrap = gson.fromJson(jsr, TicketWrapper.class);
         List<Ticket> tickets = ticketWrap.getTickets();
-        Duration minTime = findMinTime(tickets, "Владивосток", "Тель-Авив");
+        List<Duration> minTimes = findMinTime(tickets, "Владивосток", "Тель-Авив");
         double diff = findDif(tickets, "Владивосток", "Тель-Авив");
 
 
@@ -37,13 +36,20 @@ public class MyJsonReader {
         return avg - median;
     }
 
-    public static Duration findMinTime(List<Ticket> tickets, String dCity, String aCity) throws FileNotFoundException {
-        Duration duration = tickets.stream().
-                filter((ticket) -> ticket.origin_name.equals(dCity) && ticket.destination_name.equals(aCity)).
-                min(Comparator.comparing(MyJsonReader::findTravelTime)).
-                map(MyJsonReader::findTravelTime).get();
-        System.out.println(duration.toMinutes() + " minute");
-        return duration;
+    public static List<Duration> findMinTime(List<Ticket> tickets, String dCity, String aCity) throws FileNotFoundException {
+        Set<String> companies = tickets.stream().map(ticket -> ticket.carrier).collect(Collectors.toSet());
+        List<Duration> durations = new ArrayList<>();
+        for (String company : companies) {
+            Duration duration = tickets.stream().
+                    filter((ticket) -> ticket.origin_name.equals(dCity) && ticket.destination_name.equals(aCity)).
+                    filter(ticket -> ticket.carrier.equals(company)).
+                    min(Comparator.comparing(MyJsonReader::findTravelTime)).
+                    map(MyJsonReader::findTravelTime).get();
+            durations.add(duration);
+            System.out.println(company + ": " + duration.toMinutes() + " minute");
+        }
+
+        return durations;
     }
 
     private static double findMedian(List<Ticket> tickets) {
