@@ -1,26 +1,101 @@
-import java.nio.file.Path;
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
 
-public class JsonReader {
-//- Минимальное время полета между городами Владивосток и Тель-Авив для каждого авиаперевозчика
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
+public class MyJsonReader {
+    //- Минимальное время полета между городами Владивосток и Тель-Авив для каждого авиаперевозчика
 //- Разницу между средней ценой  и медианой для полета между городами  Владивосток и Тель-Авив
+    private static final String FILE_NAME = "tickets.json";
 
 
+    public static void main(String[] args) throws FileNotFoundException {
+        Gson gson = new Gson();
+        JsonReader jsr = new JsonReader(new FileReader(FILE_NAME));
+        TicketWrapper ticketWrap = gson.fromJson(jsr, TicketWrapper.class);
+        List<Ticket> tickets = ticketWrap.getTickets();
+        Duration minTime = findMinTime(tickets, "Владивосток", "Тель-Авив");
+        double diff = findDif(tickets, "Владивосток", "Тель-Авив");
 
-    public static void find_min_time(){
-        Path.of(" ")
+
     }
 
+    public static double findDif(List<Ticket> tickets, String dCity, String aCity) {
+        List<Ticket> ticketsFiltered = tickets.stream().
+                filter((ticket) -> ticket.origin_name.equals(dCity) && ticket.destination_name.equals(aCity)).
+                toList();
+        double avg = ticketsFiltered.stream().mapToInt((ticket) -> ticket.price).average().getAsDouble();
+        double median = findMedian(ticketsFiltered);
+        System.out.println(avg - median + " rub");
+        return avg - median;
+    }
 
+    public static Duration findMinTime(List<Ticket> tickets, String dCity, String aCity) throws FileNotFoundException {
+        Duration duration = tickets.stream().
+                filter((ticket) -> ticket.origin_name.equals(dCity) && ticket.destination_name.equals(aCity)).
+                min(Comparator.comparing(MyJsonReader::findTravelTime)).
+                map(MyJsonReader::findTravelTime).get();
+        System.out.println(duration.toMinutes() + " minute");
+        return duration;
+    }
 
-    public static  class Ticket {
+    private static double findMedian(List<Ticket> tickets) {
+        int[] prices = tickets.stream().
+                mapToInt((a) -> a.price).
+                toArray();
+        Arrays.sort(prices);
+        int n = prices.length;
+
+        if (n % 2 != 0) {
+            return prices[n / 2];
+        }
+        return (prices[(n / 2) - 1] + prices[n / 2]) / 2.0;
+    }
+
+    private static Duration findTravelTime(Ticket ticket) {
+        String arrivalDate = ticket.arrival_date;
+        String arrivalTime = ticket.arrival_time;
+        String departureDate = ticket.departure_date;
+        String departureTime = ticket.departure_time;
+
+        LocalDateTime arrival = convertToDateTime(arrivalDate, arrivalTime);
+        LocalDateTime departure = convertToDateTime(departureDate, departureTime);
+        return Duration.between(departure, arrival);
+    }
+
+    private static LocalDateTime convertToDateTime(String date, String time) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yy H:mm");
+        return LocalDateTime.parse(date + " " + time, dateFormatter);
+    }
+
+    static class TicketWrapper {
+        List<Ticket> tickets;
+
+        public List<Ticket> getTickets() {
+            return tickets;
+        }
+
+        public void setTickets(List<Ticket> tickets) {
+            this.tickets = tickets;
+        }
+    }
+
+    public static class Ticket {
         private String origin;
-        private String originName;
+        private String origin_name;
         private String destination;
-        private String destinationName;
-        private String departureDate;
-        private String departureTime;
-        private String arrivalDate;
-        private String arrivalTime;
+        private String destination_name;
+        private String departure_date;
+        private String departure_time;
+        private String arrival_date;
+        private String arrival_time;
         private String carrier;
         private int stops;
         private int price;
@@ -30,13 +105,13 @@ public class JsonReader {
                       String departureDate, String departureTime, String arrivalDate,
                       String arrivalTime, String carrier, int stops, int price) {
             this.origin = origin;
-            this.originName = originName;
+            this.origin_name = originName;
             this.destination = destination;
-            this.destinationName = destinationName;
-            this.departureDate = departureDate;
-            this.departureTime = departureTime;
-            this.arrivalDate = arrivalDate;
-            this.arrivalTime = arrivalTime;
+            this.destination_name = destinationName;
+            this.departure_date = departureDate;
+            this.departure_time = departureTime;
+            this.arrival_date = arrivalDate;
+            this.arrival_time = arrivalTime;
             this.carrier = carrier;
             this.stops = stops;
             this.price = price;
@@ -51,12 +126,12 @@ public class JsonReader {
             this.origin = origin;
         }
 
-        public String getOriginName() {
-            return originName;
+        public String getOrigin_name() {
+            return origin_name;
         }
 
-        public void setOriginName(String originName) {
-            this.originName = originName;
+        public void setOrigin_name(String origin_name) {
+            this.origin_name = origin_name;
         }
 
         public String getDestination() {
@@ -67,44 +142,44 @@ public class JsonReader {
             this.destination = destination;
         }
 
-        public String getDestinationName() {
-            return destinationName;
+        public String getDestination_name() {
+            return destination_name;
         }
 
-        public void setDestinationName(String destinationName) {
-            this.destinationName = destinationName;
+        public void setDestination_name(String destination_name) {
+            this.destination_name = destination_name;
         }
 
-        public String getDepartureDate() {
-            return departureDate;
+        public String getDeparture_date() {
+            return departure_date;
         }
 
-        public void setDepartureDate(String departureDate) {
-            this.departureDate = departureDate;
+        public void setDeparture_date(String departure_date) {
+            this.departure_date = departure_date;
         }
 
-        public String getDepartureTime() {
-            return departureTime;
+        public String getDeparture_time() {
+            return departure_time;
         }
 
-        public void setDepartureTime(String departureTime) {
-            this.departureTime = departureTime;
+        public void setDeparture_time(String departure_time) {
+            this.departure_time = departure_time;
         }
 
-        public String getArrivalDate() {
-            return arrivalDate;
+        public String getArrival_date() {
+            return arrival_date;
         }
 
-        public void setArrivalDate(String arrivalDate) {
-            this.arrivalDate = arrivalDate;
+        public void setArrival_date(String arrival_date) {
+            this.arrival_date = arrival_date;
         }
 
-        public String getArrivalTime() {
-            return arrivalTime;
+        public String getArrival_time() {
+            return arrival_time;
         }
 
-        public void setArrivalTime(String arrivalTime) {
-            this.arrivalTime = arrivalTime;
+        public void setArrival_time(String arrival_time) {
+            this.arrival_time = arrival_time;
         }
 
         public String getCarrier() {
@@ -136,13 +211,13 @@ public class JsonReader {
         public String toString() {
             return "Ticket{" +
                     "origin='" + origin + '\'' +
-                    ", originName='" + originName + '\'' +
+                    ", originName='" + origin_name + '\'' +
                     ", destination='" + destination + '\'' +
-                    ", destinationName='" + destinationName + '\'' +
-                    ", departureDate='" + departureDate + '\'' +
-                    ", departureTime='" + departureTime + '\'' +
-                    ", arrivalDate='" + arrivalDate + '\'' +
-                    ", arrivalTime='" + arrivalTime + '\'' +
+                    ", destinationName='" + destination_name + '\'' +
+                    ", departureDate='" + departure_date + '\'' +
+                    ", departureTime='" + departure_time + '\'' +
+                    ", arrivalDate='" + arrival_date + '\'' +
+                    ", arrivalTime='" + arrival_time + '\'' +
                     ", carrier='" + carrier + '\'' +
                     ", stops=" + stops +
                     ", price=" + price +
